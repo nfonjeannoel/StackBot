@@ -1,10 +1,8 @@
 from urllib.parse import urljoin
-
 import scrapy
 
-first = True
-prev = ""
 page_no = 1
+
 
 class StackbotSpider(scrapy.Spider):
     name = 'stackbot'
@@ -16,15 +14,12 @@ class StackbotSpider(scrapy.Spider):
 
         for link in urls:
             url = urljoin(response.url, link)
-            # parameters
-
             yield scrapy.Request(url, callback=self.get_details)
         global page_no
         page_no += 1
         if page_no < 22:
             next_page = f"https://stackoverflow.com/jobs?pg={page_no}"
-            if next_page is not None:
-                yield response.follow(next_page, callback=self.parse)
+            yield response.follow(next_page, callback=self.parse)
 
     def get_details(self, response):
 
@@ -43,7 +38,7 @@ class StackbotSpider(scrapy.Spider):
         company_name = response.css("div.mb4 .fc-black-700::text").get()
         company_url = urljoin(response.url, response.css("div.mb4 .fc-black-700::attr(href)").get())
         company_size = response.css(
-                "#overview-items > section:nth-child(2) > div > div:nth-child(2) > div:nth-child(2) > span.fw-bold::text").get()
+            "#overview-items > section:nth-child(2) > div > div:nth-child(2) > div:nth-child(2) > span.fw-bold::text").get()
 
         company_type = response.css(
             "#overview-items > section:nth-child(2) > div > div:nth-child(2) > div:nth-child(1) > span.fw-bold::text").get()
