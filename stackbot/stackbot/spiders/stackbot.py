@@ -7,7 +7,7 @@ page_no = 1
 class StackbotSpider(scrapy.Spider):
     name = 'stackbot'
     # allowed_domains = ['x']
-    start_urls = [f'https://stackoverflow.com/jobs?pg={page_no}']
+    start_urls = ['https://stackoverflow.com/jobs']
 
     def parse(self, response):
         urls = response.css("h2 > a.s-link::attr(href)").getall()
@@ -25,6 +25,8 @@ class StackbotSpider(scrapy.Spider):
 
         title = response.css(".mb4 .fc-black-900::text").get()
         location = response.css("div.flex--item.fl1.sticky\:ml2 > div > span::text").get()
+        if len(location.split()[0]) == 1:
+            location = " ".join(location.split()[1:])
         salary = response.css("ul.horizontal-list li::attr(title)").get()
         industry = response.css(
             "#overview-items > section:nth-child(2) > div > div:nth-child(1) > div:nth-child(3) > span.fw-bold::text").get()
@@ -35,6 +37,8 @@ class StackbotSpider(scrapy.Spider):
             "#overview-items > section:nth-child(2) > div > div:nth-child(1) > div:nth-child(2) > span.fw-bold::text").get()
         job_description = response.css("#overview-items > section.mb32.fs-body2.fc-medium > div p::text").getall()
         company_location = response.css("div.mb4 span.fc-black-500::text").get()
+        if len(company_location.split()[0]) == 1:
+            company_location = " ".join(company_location.split()[1:])
         company_name = response.css("div.mb4 .fc-black-700::text").get()
         company_url = urljoin(response.url, response.css("div.mb4 .fc-black-700::attr(href)").get())
         company_size = response.css(
