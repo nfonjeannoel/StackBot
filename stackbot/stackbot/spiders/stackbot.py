@@ -2,12 +2,12 @@ from urllib.parse import urljoin
 import scrapy
 
 page_no = 1
-
+pages_to_scrape_count = 1
 
 class StackbotSpider(scrapy.Spider):
     name = 'stackbot'
     # allowed_domains = ['x']
-    start_urls = ['https://stackoverflow.com/jobs']
+    start_urls = [f"https://stackoverflow.com/jobs?pg={page_no}"]
 
     def parse(self, response):
         urls = response.css("h2 > a.s-link::attr(href)").getall()
@@ -16,8 +16,9 @@ class StackbotSpider(scrapy.Spider):
             url = urljoin(response.url, link)
             yield scrapy.Request(url, callback=self.get_details)
         global page_no
+        global pages_to_scrape_count
         page_no += 1
-        if page_no < 22:
+        if page_no <= pages_to_scrape_count:
             next_page = f"https://stackoverflow.com/jobs?pg={page_no}"
             yield response.follow(next_page, callback=self.parse)
 
