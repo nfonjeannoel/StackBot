@@ -1,8 +1,11 @@
 from urllib.parse import urljoin
 import scrapy
 
+# variable to determine page to start from
 page_no = 1
+# variable to determine number of pages to scrape
 pages_to_scrape_count = 1
+scrape_counter = 0
 
 class StackbotSpider(scrapy.Spider):
     name = 'stackbot'
@@ -10,6 +13,8 @@ class StackbotSpider(scrapy.Spider):
     start_urls = [f"https://stackoverflow.com/jobs?pg={page_no}"]
 
     def parse(self, response):
+        global scrape_counter
+        scrape_counter += 1
         urls = response.css("h2 > a.s-link::attr(href)").getall()
 
         for link in urls:
@@ -18,7 +23,7 @@ class StackbotSpider(scrapy.Spider):
         global page_no
         global pages_to_scrape_count
         page_no += 1
-        if page_no <= pages_to_scrape_count:
+        if scrape_counter <= pages_to_scrape_count:
             next_page = f"https://stackoverflow.com/jobs?pg={page_no}"
             yield response.follow(next_page, callback=self.parse)
 
