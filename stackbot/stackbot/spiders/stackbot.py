@@ -1,11 +1,18 @@
+import json
+from datetime import datetime
 from urllib.parse import urljoin
 import scrapy
 
 # variable to determine page to start from
+from scrapy.crawler import CrawlerProcess
+
 page_no = 1
 # variable to determine number of pages to scrape
 pages_to_scrape_count = 1
 scrape_counter = 0
+all_data = []
+start_page = 1
+no_to_crawl = 1
 
 class StackbotSpider(scrapy.Spider):
     name = 'stackbot'
@@ -53,7 +60,7 @@ class StackbotSpider(scrapy.Spider):
         company_type = response.css(
             "#overview-items > section:nth-child(2) > div > div:nth-child(2) > div:nth-child(1) > span.fw-bold::text").get()
 
-        yield {
+        data = {
             "title": title,
             "location": location,
             "salary ": salary,
@@ -68,3 +75,39 @@ class StackbotSpider(scrapy.Spider):
             "company_size": company_size,
             "company_type": company_type
         }
+        all_data.append(data)
+        yield data
+
+
+from scrapy import cmdline
+
+
+def save_file(data):
+    with open(f'jobs-pg{start_page}to{start_page + no_to_crawl - 1}.json', 'w') as f:
+        f.write(json.dumps(data))
+
+
+if __name__ == '__main__':
+
+    try:
+        page_no = int(input("enter start page number"))
+        start_page = page_no
+    except:
+        print("invalid format, default of 1 will be used")
+
+    try:
+        pages_to_scrape_count = int(input("enter number of pages to scrape"))
+        no_to_crawl = pages_to_scrape_count
+    except:
+        print("invalid format, default of 1 will be used")
+    process = CrawlerProcess(
+        #     {
+        #     'USER_AGENT': 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)'
+        # }
+    )
+
+    process.crawl(StackbotSpider)
+    process.start()
+    save_file(all_data)
+
+    # cmdline.execute("scrapy crawl stackbot -O jobs.json".split())
