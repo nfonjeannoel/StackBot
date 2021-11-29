@@ -88,7 +88,11 @@ def save_file(data):
 
 
 if __name__ == '__main__':
-
+    # to run code from pycharm, click the run button
+    #to run from terminal, go to the directory where the file is. for example
+    # C:\Users\JEANNOEL\PycharmProjects\StackBot\stackbot\stackbot\spiders>
+    #use command python stackbot.py
+    #fill in the promted data, and make sure to press enter after each input
     try:
         page_no = int(input("enter start page number"))
         start_page = page_no
