@@ -2,40 +2,38 @@ import json
 from datetime import datetime
 from urllib.parse import urljoin
 import scrapy
-
+from pymongo import MongoClient
+from dotenv import load_dotenv
+import os
+from time import sleep
+from pathlib import Path
 # variable to determine page to start from
+from scrapy import crawler
 from scrapy.crawler import CrawlerProcess
 
-page_no = 1
 # variable to determine number of pages to scrape
-pages_to_scrape_count = 1
+pages_to_scrape_count = 4
 scrape_counter = 0
 all_data = []
-start_page = 1
-no_to_crawl = 1
+
+pagination_counter = 1
+
 
 class StackbotSpider(scrapy.Spider):
     name = 'stackbot'
-    # allowed_domains = ['x']
-    start_urls = [f"https://stackoverflow.com/jobs?pg={page_no}"]
+    start_urls = [
+        f"https://www-stackoverflow-com.translate.goog/jobs?pg={scrape_counter}&_x_tr_sl=en&_x_tr_tl=en&_x_tr_hl=en&_x_tr_pto=sc",
+        f"https://www-stackoverflow-com.translate.goog/jobs/?pg={scrape_counter+1}&_x_tr_sl=en&_x_tr_tl=en&_x_tr_hl=en&_x_tr_pto=sc"
+    ]
+
+    # start_urls = [f"https://stackoverflow.com/jobs?pg={page_no}"]
 
     def parse(self, response):
-        global scrape_counter
-        scrape_counter += 1
         urls = response.css("h2 > a.s-link::attr(href)").getall()
-
         for link in urls:
-            url = urljoin(response.url, link)
-            yield scrapy.Request(url, callback=self.get_details)
-        global page_no
-        global pages_to_scrape_count
-        page_no += 1
-        if scrape_counter <= pages_to_scrape_count:
-            next_page = f"https://stackoverflow.com/jobs?pg={page_no}"
-            yield response.follow(next_page, callback=self.parse)
+            response.follow(url=link, callback=self.get_details)
 
     def get_details(self, response):
-
         title = response.css(".mb4 .fc-black-900::text").get()
         location = response.css("div.flex--item.fl1.sticky\:ml2 > div > span::text").get()
         if len(location.split()[0]) == 1:
@@ -68,6 +66,7 @@ class StackbotSpider(scrapy.Spider):
             "work_type": work_type,
             "job_type": job_type,
             "experience_level": experience_level,
+            "job_url": response.url,
             "job_description ": job_description,
             "company_location": company_location,
             "company_name": company_name,
@@ -75,43 +74,49 @@ class StackbotSpider(scrapy.Spider):
             "company_size": company_size,
             "company_type": company_type
         }
+
+        # follow the link to about page and pass data as argument
+
+        more_info_url = response.css("#content .truncate ::attr(href)").get()
+        print(data)
+        if more_info_url is None:
+            all_data.append(data)
+            print(f"page {title} does not contain more information")
+            return
+        yield response.follow(url=more_info_url, callback=self.get_more_info, meta={"basic_info": data})
+
+    def get_more_info(self, response):
+        data = response.meta.get("basic_info")
+        about = {"website": response.css(".d-block .js-gps-track ::attr(href)").get(),
+                 "industry": response.css(".mt12 > .d-block ::text").get(),
+                 "size": response.css(".mt12:nth-child(3) .flex--item:nth-child(1) .d-block ::text").get(),
+                 "founded": response.css(".mt12:nth-child(3) .flex--item:nth-child(2) .d-block ::text").get(),
+                 "status": response.css(".mt12:nth-child(3) .flex--item:nth-child(3) .d-block ::text").get(),
+                 "followers": response.css(".flex__fl1+ .mt12 .d-block ::text").get(),
+                 "social_links": response.css("#right-column .flex--item .js-gps-track ::attr(href)").getall()}
+        data["about"] = about
         all_data.append(data)
-        yield data
-
-
-from scrapy import cmdline
 
 
 def save_file(data):
-    with open(f'jobs-pg{start_page}to{start_page + no_to_crawl - 1}.json', 'w') as f:
+    with open(f'jobs{scrape_counter}.json', 'w') as f:
         f.write(json.dumps(data))
 
 
 if __name__ == '__main__':
-    # to run code from pycharm, click the run button
-    #to run from terminal, go to the directory where the file is. for example
-    # C:\Users\JEANNOEL\PycharmProjects\StackBot\stackbot\stackbot\spiders>
-    #use command python stackbot.py
-    #fill in the promted data, and make sure to press enter after each input
-    try:
-        page_no = int(input("enter start page number"))
-        start_page = page_no
-    except:
-        print("invalid format, default of 1 will be used")
-
-    try:
-        pages_to_scrape_count = int(input("enter number of pages to scrape"))
-        no_to_crawl = pages_to_scrape_count
-    except:
-        print("invalid format, default of 1 will be used")
-    process = CrawlerProcess(
-        #     {
-        #     'USER_AGENT': 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)'
-        # }
-    )
-
-    process.crawl(StackbotSpider)
-    process.start()
-    save_file(all_data)
-
-    # cmdline.execute("scrapy crawl stackbot -O jobs.json".split())
+    # process = CrawlerProcess()
+    # process.crawl(StackbotSpider)
+    # process.start()
+    # save_file(all_data)
+    # process = CrawlerProcess()
+    # process.crawl(StackbotSpider)
+    # scrape_counter will be used to get the pg variable for the url
+    for scrape_counter in range(1, 20, 2):
+        process = CrawlerProcess()
+        process.crawl(StackbotSpider)
+        process.start()
+        process.stop()
+        save_file(all_data)
+        all_data = []
+        # sleeping 30 munites
+        sleep(30)
